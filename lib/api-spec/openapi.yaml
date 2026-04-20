@@ -1,0 +1,506 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: IoT Platform API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: devices
+    description: Device management
+  - name: telemetry
+    description: Device telemetry data
+  - name: alerts
+    description: Alert rules and notifications
+  - name: dashboards
+    description: Dashboard management
+  - name: stats
+    description: Platform statistics
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /devices:
+    get:
+      operationId: listDevices
+      tags: [devices]
+      summary: List all devices
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [online, offline, inactive]
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Device"
+    post:
+      operationId: createDevice
+      tags: [devices]
+      summary: Create a new device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDeviceBody"
+      responses:
+        "201":
+          description: Device created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+
+  /devices/{id}:
+    get:
+      operationId: getDevice
+      tags: [devices]
+      summary: Get a device by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Device details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+        "404":
+          description: Not found
+    put:
+      operationId: updateDevice
+      tags: [devices]
+      summary: Update a device
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDeviceBody"
+      responses:
+        "200":
+          description: Device updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+    delete:
+      operationId: deleteDevice
+      tags: [devices]
+      summary: Delete a device
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /telemetry:
+    get:
+      operationId: listTelemetry
+      tags: [telemetry]
+      summary: Get telemetry records
+      parameters:
+        - name: deviceId
+          in: query
+          schema:
+            type: integer
+        - name: key
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: Telemetry records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Telemetry"
+    post:
+      operationId: ingestTelemetry
+      tags: [telemetry]
+      summary: Ingest telemetry data for a device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IngestTelemetryBody"
+      responses:
+        "201":
+          description: Telemetry stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Telemetry"
+
+  /telemetry/latest:
+    get:
+      operationId: getLatestTelemetry
+      tags: [telemetry]
+      summary: Get latest telemetry per device per key
+      parameters:
+        - name: deviceId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Latest telemetry values
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LatestTelemetry"
+
+  /alerts:
+    get:
+      operationId: listAlerts
+      tags: [alerts]
+      summary: List all alert rules
+      responses:
+        "200":
+          description: Alert rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Alert"
+    post:
+      operationId: createAlert
+      tags: [alerts]
+      summary: Create an alert rule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAlertBody"
+      responses:
+        "201":
+          description: Alert created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Alert"
+
+  /alerts/{id}:
+    delete:
+      operationId: deleteAlert
+      tags: [alerts]
+      summary: Delete an alert rule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /alerts/triggered:
+    get:
+      operationId: listTriggeredAlerts
+      tags: [alerts]
+      summary: List recent triggered alert events
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Triggered alert events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TriggeredAlert"
+
+  /stats/overview:
+    get:
+      operationId: getStats
+      tags: [stats]
+      summary: Get platform overview statistics
+      responses:
+        "200":
+          description: Platform stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformStats"
+
+  /stats/activity:
+    get:
+      operationId: getActivity
+      tags: [stats]
+      summary: Get recent telemetry activity (last 24h counts by hour)
+      responses:
+        "200":
+          description: Activity feed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityPoint"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    Device:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+          enum: [online, offline, inactive]
+        description:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+        accessToken:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      required: [id, name, type, status, accessToken, createdAt, updatedAt]
+
+    CreateDeviceBody:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        description:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+      required: [name, type]
+
+    UpdateDeviceBody:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+          enum: [online, offline, inactive]
+        description:
+          type: string
+          nullable: true
+        location:
+          type: string
+          nullable: true
+
+    Telemetry:
+      type: object
+      properties:
+        id:
+          type: integer
+        deviceId:
+          type: integer
+        key:
+          type: string
+        value:
+          type: string
+        numericValue:
+          type: number
+          nullable: true
+        recordedAt:
+          type: string
+      required: [id, deviceId, key, value, recordedAt]
+
+    IngestTelemetryBody:
+      type: object
+      properties:
+        deviceId:
+          type: integer
+        key:
+          type: string
+        value:
+          type: string
+        numericValue:
+          type: number
+          nullable: true
+      required: [deviceId, key, value]
+
+    LatestTelemetry:
+      type: object
+      properties:
+        deviceId:
+          type: integer
+        deviceName:
+          type: string
+        key:
+          type: string
+        value:
+          type: string
+        numericValue:
+          type: number
+          nullable: true
+        recordedAt:
+          type: string
+      required: [deviceId, deviceName, key, value, recordedAt]
+
+    Alert:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        deviceId:
+          type: integer
+        deviceName:
+          type: string
+        telemetryKey:
+          type: string
+        condition:
+          type: string
+          enum: [gt, lt, eq, gte, lte]
+        threshold:
+          type: number
+        severity:
+          type: string
+          enum: [info, warning, critical]
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+      required: [id, name, deviceId, deviceName, telemetryKey, condition, threshold, severity, enabled, createdAt]
+
+    CreateAlertBody:
+      type: object
+      properties:
+        name:
+          type: string
+        deviceId:
+          type: integer
+        telemetryKey:
+          type: string
+        condition:
+          type: string
+          enum: [gt, lt, eq, gte, lte]
+        threshold:
+          type: number
+        severity:
+          type: string
+          enum: [info, warning, critical]
+      required: [name, deviceId, telemetryKey, condition, threshold, severity]
+
+    TriggeredAlert:
+      type: object
+      properties:
+        id:
+          type: integer
+        alertId:
+          type: integer
+        alertName:
+          type: string
+        deviceName:
+          type: string
+        telemetryKey:
+          type: string
+        value:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, critical]
+        triggeredAt:
+          type: string
+      required: [id, alertId, alertName, deviceName, telemetryKey, value, severity, triggeredAt]
+
+    PlatformStats:
+      type: object
+      properties:
+        totalDevices:
+          type: integer
+        onlineDevices:
+          type: integer
+        offlineDevices:
+          type: integer
+        totalTelemetry:
+          type: integer
+        activeAlerts:
+          type: integer
+        triggeredAlertsToday:
+          type: integer
+      required: [totalDevices, onlineDevices, offlineDevices, totalTelemetry, activeAlerts, triggeredAlertsToday]
+
+    ActivityPoint:
+      type: object
+      properties:
+        hour:
+          type: string
+        count:
+          type: integer
+      required: [hour, count]
